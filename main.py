@@ -7,7 +7,7 @@ def main():
 
     df = pd.read_csv('active.txt', delimiter = "\n", header= None)
 
-    #Is there a better way to do this? Instead of reading in as a dataframe then reshaping, can we do better?
+    #Is there a better way to do this? Instead of reading in as a dataframe then reshaping, can we read it in a 3 column data frame?
     #https://stackoverflow.com/questions/39761366/transpose-the-data-in-a-column-every-nth-rows-in-pandas
     #Credit: jezrael (https://stackoverflow.com/users/2901002/jezrael)
     new_df = pd.DataFrame(np.reshape(df.values,(int(df.shape[0] / 3),3)),columns=['Name','Line 1','Line 2'])
