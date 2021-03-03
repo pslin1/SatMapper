@@ -3,7 +3,12 @@ import datetime
 import pandas as pd
 import numpy as np
 
-def main():
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
 
     df = pd.read_csv('active.txt', delimiter = "\n", header= None)
 
@@ -15,7 +20,7 @@ def main():
     for index, row in new_df.iterrows():
         tle_rec = ephem.readtle(row['Name'], row['Line 1'], row['Line 2'])
         tle_rec.compute()
-        print(tle_rec.sublong, tle_rec.sublat, tle_rec.elevation)
+        #print(tle_rec.sublong, tle_rec.sublat, tle_rec.elevation)
 
     # This is an example of how to use ephem.readtle
     # name = "ISS (ZARYA)";
@@ -26,7 +31,8 @@ def main():
     # tle_rec.compute()
     #
     # print(tle_rec.sublong, tle_rec.sublat, tle_rec.elevation)
+    return render_template('index.html')
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
