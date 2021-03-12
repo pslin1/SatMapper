@@ -10,10 +10,20 @@ import geocoder
 
 app = Flask(__name__)
 
-def generate_map():
+def get_latlng():
+    #Get user lat long via IP address
     myloc = geocoder.ip('me')
 
-    map = folium.Map(location = myloc.latlng, zoom_start = 13)
+    return myloc.latlng
+
+
+#def make_observer():
+
+def generate_map(latlng):
+    #Get user lat long via IP address
+    myloc = geocoder.ip('me')
+
+    map = folium.Map(location = latlng, zoom_start = 13)
 
     return map
 
@@ -45,11 +55,17 @@ def index():
     #
     # print(tle_rec.sublong, tle_rec.sublat, tle_rec.elevation)
 
+    #Check iscircumpolar as well as next_pass
+    #look at .alt property of an object?
+
     return render_template('index.html')
 
 @app.route('/map')
 def show_map():
-    map = generate_map()
+
+    latlng = get_latlng()
+
+    map = generate_map(latlng)
 
     return map._repr_html_()
 
