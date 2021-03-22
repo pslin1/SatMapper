@@ -3,7 +3,7 @@ import datetime
 import pandas as pd
 import numpy as np
 
-from flask import Flask, render_template, session
+from flask import Flask, render_template, session, redirect, request
 
 import folium
 import geocoder
@@ -60,14 +60,57 @@ def index():
 
     return render_template('index.html')
 
-@app.route('/map')
+@app.route('/map', methods=['GET', 'POST'])
 def show_map():
 
-    latlng = get_latlng()
+    #https://pythonise.com/series/learning-flask/flask-working-with-forms
+    #Author: Julian Nash
+    #Date: 2021-03-21
+    if request.method == 'POST':
 
-    map = generate_map(latlng)
+        req = request.form
 
-    return map._repr_html_()
+        auto_latlng = get_latlng()
+
+        #If blank, use values from geoIP
+        if req.get("latitude") == '':
+            latitude = auto_latlng[0]
+
+        else:
+            try:
+                #try to turn input value into float
+                latitude = float(req.get("latitude"))
+
+                #valid values for latitude are between -90 and 90
+                if latitude > 90.0 or latitude < -90.0:
+                    return render_template('index.html')
+            except:
+                #return to main page if invalid input
+                return render_template('index.html')
+
+        #If blank, use values from geoIP
+        if req.get("longitude") == '':
+            longitude = auto_latlng[1]
+
+        else:
+            try:
+                #try to turn input value into float
+                longitude = float(req.get("longitude"))
+
+                #valid values for longitude are between -180 and 180
+                if longitude > 180.0 or longitude < -180.0:
+                    return render_template('index.html')
+            except:
+                #return to main page if invalid input
+                return render_template('index.html')
+
+        latlng = [latitude, longitude]
+
+        map = generate_map(latlng)
+
+        return map._repr_html_()
+
+    return render_template('index.html')
 
 # if __name__ == '__main__':
 #     main()

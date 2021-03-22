@@ -2,5 +2,19 @@
 
 {% block content %}
     <h1>{% block title %} Welcome to SatMapper {% endblock %}</h1>
-    <a href="/map" class="btn btn-primary btn-lg" target="_blank">Show Map</a>
+
+    <form action="/map" method="POST" target="_blank">
+
+        <div class="form-group">
+          <label>Latitude</label>
+          <input type="text" class="form-control" id="latitude" name="latitude" placeholder="Leave blank to autofill">
+        </div>
+
+        <div class="form-group">
+          <label>Longitude</label>
+          <input type="text" class="form-control" id="longitude" name="longitude" placeholder="Leave blank to autofill">
+        </div>
+        <button type="submit" class="btn btn-primary">Show Map</button>
+        <!--<a href="/map" class="btn btn-primary btn-lg" target="_blank">Show Map</a>-->
+    </form>
 {% endblock %}
