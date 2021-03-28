@@ -1,7 +1,8 @@
 import ephem
-import datetime
+from datetime import datetime
 import pandas as pd
 import numpy as np
+import requests
 
 from flask import Flask, render_template, session, redirect, request
 
@@ -16,8 +17,40 @@ def get_latlng():
 
     return myloc.latlng
 
+#https://stackoverflow.com/questions/19513212/can-i-get-the-altitude-with-geopy-in-python-with-longitude-latitude
+#Credit: Iain D (https://stackoverflow.com/users/4486474/iain-d)
+#Date: March 28, 2021
+#This takes around 20ish seconds to run, if elevation not found, just returns 0
+def get_elevation(lat, long):
+    query = ('https://api.open-elevation.com/api/v1/lookup'f'?locations={lat},{long}')
+    r = requests.get(query).json()  # json object, various ways you can extract value
+    # one approach is to use pandas json functionality:
+    elevation = pd.json_normalize(r, 'results')['elevation'].values[0]
+    return elevation
 
-#def make_observer():
+def make_observer(lat, long, elev):
+    obs = ephem.Observer()
+    obs.lon = '-84.39733'
+    obs.lat = '33.775867'
+    obs.elevation = elev
+    obs.date = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+
+    return obs
+
+def calculate_visible(obs):
+    df = pd.read_csv('active.txt', delimiter = "\n", header= None)
+
+    #Reshape dataframe into three column dataframe
+    #Is there a better way to do this? Instead of reading in as a dataframe then reshaping, can we read it in a 3 column data frame?
+    #https://stackoverflow.com/questions/39761366/transpose-the-data-in-a-column-every-nth-rows-in-pandas
+    #Credit: jezrael (https://stackoverflow.com/users/2901002/jezrael)
+    new_df = pd.DataFrame(np.reshape(df.values,(int(df.shape[0] / 3),3)),columns=['Name','Line 1','Line 2'])
+
+    #Parse TLE data
+    for index, row in new_df.iterrows():
+        tle_rec = ephem.readtle(row['Name'], row['Line 1'], row['Line 2'])
+        tle_rec.compute(obs)
+        #print(tle_rec.sublong, tle_rec.sublat, tle_rec.elevation)
 
 def generate_map(latlng):
     #Get user lat long via IP address
@@ -104,7 +137,29 @@ def show_map():
                 #return to main page if invalid input
                 return render_template('index.html')
 
+        #If blank, use values from geoIP
+        if req.get("elevation") == '':
+            elevation = get_elevation(latitude, longitude)
+
+        else:
+            try:
+                #try to turn input value into float
+                #allow any numeric values
+                elevation = float(req.get("elevation"))
+
+            except:
+                #return to main page if invalid input
+                return render_template('index.html')
+
         latlng = [latitude, longitude]
+
+        #elevation = get_elevation(latitude, longitude)
+        #elevation=0
+
+        obs = make_observer(latitude, longitude, elevation)
+
+        #DO TLE CALCULATION HERE
+        calculate_visible(obs)
 
         map = generate_map(latlng)
 
