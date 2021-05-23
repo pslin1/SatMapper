@@ -30,14 +30,15 @@ def get_elevation(lat, long):
 
 def make_observer(lat, long, elev):
     obs = ephem.Observer()
-    obs.lon = '-84.39733'
-    obs.lat = '33.775867'
+    obs.lat = '60.721188'
+    obs.lon = '-135.056839'
     obs.elevation = elev
+    #print(obs.lat, obs.long, obs.elev)
     obs.date = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
 
     return obs
 
-def calculate_visible(obs):
+def calculate_visible(obs, map):
     df = pd.read_csv('active.txt', delimiter = "\n", header= None)
 
     #Reshape dataframe into three column dataframe
@@ -46,11 +47,22 @@ def calculate_visible(obs):
     #Credit: jezrael (https://stackoverflow.com/users/2901002/jezrael)
     new_df = pd.DataFrame(np.reshape(df.values,(int(df.shape[0] / 3),3)),columns=['Name','Line 1','Line 2'])
 
+    #count_int = 0
+
     #Parse TLE data
     for index, row in new_df.iterrows():
         tle_rec = ephem.readtle(row['Name'], row['Line 1'], row['Line 2'])
         tle_rec.compute(obs)
-        #print(tle_rec.sublong, tle_rec.sublat, tle_rec.elevation)
+        #print(tle_rec.sublat / ephem.degree, tle_rec.sublong, tle_rec.elevation)
+        if tle_rec.alt > 0:
+            coords = [tle_rec.sublat / ephem.degree, tle_rec.sublong / ephem.degree]
+        #print(tle_rec.alt)
+        #count_int += 1
+        #print(tle_rec.name)
+            folium.Marker(coords, popup = tle_rec.name).add_to(map)
+
+    #print(count_int)
+
 
 def generate_map(latlng):
     #Get user lat long via IP address
@@ -64,18 +76,18 @@ def generate_map(latlng):
 def index():
 
     #Create single column dataframe from csv of TLE
-    df = pd.read_csv('active.txt', delimiter = "\n", header= None)
+    #df = pd.read_csv('active.txt', delimiter = "\n", header= None)
 
     #Reshape dataframe into three column dataframe
     #Is there a better way to do this? Instead of reading in as a dataframe then reshaping, can we read it in a 3 column data frame?
     #https://stackoverflow.com/questions/39761366/transpose-the-data-in-a-column-every-nth-rows-in-pandas
     #Credit: jezrael (https://stackoverflow.com/users/2901002/jezrael)
-    new_df = pd.DataFrame(np.reshape(df.values,(int(df.shape[0] / 3),3)),columns=['Name','Line 1','Line 2'])
+    #new_df = pd.DataFrame(np.reshape(df.values,(int(df.shape[0] / 3),3)),columns=['Name','Line 1','Line 2'])
 
     #Parse TLE data
-    for index, row in new_df.iterrows():
-        tle_rec = ephem.readtle(row['Name'], row['Line 1'], row['Line 2'])
-        tle_rec.compute()
+    #for index, row in new_df.iterrows():
+        #tle_rec = ephem.readtle(row['Name'], row['Line 1'], row['Line 2'])
+        #tle_rec.compute()
         #print(tle_rec.sublong, tle_rec.sublat, tle_rec.elevation)
 
     # This is an example of how to use ephem.readtle
@@ -153,15 +165,16 @@ def show_map():
 
         latlng = [latitude, longitude]
 
+        map = generate_map(latlng)
+
         #elevation = get_elevation(latitude, longitude)
         #elevation=0
 
         obs = make_observer(latitude, longitude, elevation)
 
         #DO TLE CALCULATION HERE
-        calculate_visible(obs)
+        calculate_visible(obs, map)
 
-        map = generate_map(latlng)
 
         return map._repr_html_()
 
