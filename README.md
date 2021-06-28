@@ -13,3 +13,4 @@ source venv/bin/activate
 
 # 3: Start application:
 python3 main.py
+'''
