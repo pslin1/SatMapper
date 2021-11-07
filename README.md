@@ -11,7 +11,10 @@ virtualenv venv --python=python3
 # 2: Start your virtual environment: 
 source venv/bin/activate
 
-# 3: Start application:
+# 3: Install dependencies:
+pip install -r requirements.txt
+
+# 4: Start application:
 python3 main.py
 ```
 
