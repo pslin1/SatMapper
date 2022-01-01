@@ -1,4 +1,5 @@
 import ephem
+from skyfield.api import load, EarthSatellite, wgs84
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -54,10 +55,18 @@ def calculate_visible(obs, map):
         tle_rec.compute(obs)
 
         #if altitude over local horizon > 0
-        if tle_rec.alt > 0:
-            coords = [tle_rec.sublat / ephem.degree, tle_rec.sublong / ephem.degree]
+        try:
+            if tle_rec.name == "ISS (ZARYA)":
+                print(tle_rec.sublat / ephem.degree)
+                print(tle_rec.sublong / ephem.degree)
+                print(tle_rec.alt)
+            if tle_rec.alt > 0:
+                coords = [tle_rec.sublat / ephem.degree, tle_rec.sublong / ephem.degree]
 
-            folium.Marker(coords, popup = tle_rec.name).add_to(map)
+                folium.Marker(coords, popup = tle_rec.name).add_to(map)
+
+        except:
+            pass
 
 
 
@@ -131,6 +140,42 @@ def show_map():
             except:
                 #return to main page if invalid input
                 return render_template('index.html')
+
+        ts = load.timescale()
+        t = ts.now()
+
+        #This loads the satellites in
+        #satellites_url = "https://celestrak.com/NORAD/elements/active.txt"
+        #satellites = load.tle_file(satellites_url)
+        #print(satellites)
+        #print('Loaded', len(satellites), 'satellites')
+
+        #This is an example with the ISS
+        n = 25544
+        url = 'https://celestrak.com/satcat/tle.php?CATNR={}'.format(n)
+        filename = 'tle-CATNR-{}.txt'.format(n)
+        satellites = load.tle_file(url, filename=filename)
+        print(satellites)
+
+        #set current location, calculate difference and calculate difference from topocentric (at surface)
+        current_loc = wgs84.latlon(latitude, longitude)
+        difference = satellites[0] - current_loc
+        topocentric = difference.at(t)
+
+        alt, az, distance = topocentric.altaz()
+
+        if alt.degrees > 0:
+            print('The ISS is above the horizon')
+
+        print('Altitude:', alt)
+        print('Azimuth:', az)
+        print('Distance: {:.1f} km'.format(distance.km))
+
+        #calculateposition relative to center of earth and get lat long
+        geocentric = satellites[0].at(t)
+        lat, lon = wgs84.latlon_of(geocentric)
+        print('Latitude:', lat)
+        print('Longitude:', lon)
 
         latlng = [latitude, longitude]
 
