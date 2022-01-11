@@ -1,6 +1,4 @@
-import ephem
 from skyfield.api import load, EarthSatellite, wgs84
-from datetime import datetime
 import pandas as pd
 import numpy as np
 import requests
@@ -29,50 +27,29 @@ def get_elevation(lat, long):
     elevation = pd.json_normalize(r, 'results')['elevation'].values[0]
     return elevation
 
-def make_observer(lat, long, elev):
-    obs = ephem.Observer()
-    obs.lat = lat
-    obs.lon = long
-    obs.elevation = elev
+def calculate_visible(current_loc, map):
+    ts = load.timescale()
+    current_time = ts.now()
+    #satellites_url = "https://celestrak.com/NORAD/elements/active.txt"
+    satellites = load.tle_file('active.txt')
 
-    obs.date = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
+    for item in satellites:
 
-    return obs
+        #calculate difference from topocentric (at surface) position to satellite
+        difference = item - current_loc
+        topocentric = difference.at(current_time)
 
-def calculate_visible(obs, map):
-    df = pd.read_csv('active.txt', delimiter = "\n", header= None)
+        alt, az, distance = topocentric.altaz()
+        if alt.degrees > 0:
 
-    #Reshape dataframe into three column dataframe
-    #Is there a better way to do this? Instead of reading in as a dataframe then reshaping, can we read it in a 3 column data frame?
-    #https://stackoverflow.com/questions/39761366/transpose-the-data-in-a-column-every-nth-rows-in-pandas
-    #Credit: jezrael (https://stackoverflow.com/users/2901002/jezrael)
-    new_df = pd.DataFrame(np.reshape(df.values,(int(df.shape[0] / 3),3)),columns=['Name','Line 1','Line 2'])
+            #calculate position relative to center of earth and get lat long
+            geocentric = item.at(current_time)
+            lat, lon = wgs84.latlon_of(geocentric)
 
-    #Parse TLE data
-    for index, row in new_df.iterrows():
-        tle_rec = ephem.readtle(row['Name'], row['Line 1'], row['Line 2'])
-        #Perform TLE computations given some observer object
-        tle_rec.compute(obs)
-
-        #if altitude over local horizon > 0
-        try:
-            if tle_rec.name == "ISS (ZARYA)":
-                print(tle_rec.sublat / ephem.degree)
-                print(tle_rec.sublong / ephem.degree)
-                print(tle_rec.alt)
-            if tle_rec.alt > 0:
-                coords = [tle_rec.sublat / ephem.degree, tle_rec.sublong / ephem.degree]
-
-                folium.Marker(coords, popup = tle_rec.name).add_to(map)
-
-        except:
-            pass
-
-
+            coords = [lat.degrees, lon.degrees]
+            folium.Marker(coords, popup = item.name + "\n Altitude: " + str(alt) + '\n Distance: {:.1f} km'.format(distance.km)).add_to(map)
 
 def generate_map(latlng):
-    #Get user lat long via IP address
-    myloc = geocoder.ip('me')
 
     map = folium.Map(location = latlng, zoom_start = 13)
 
@@ -141,50 +118,15 @@ def show_map():
                 #return to main page if invalid input
                 return render_template('index.html')
 
-        ts = load.timescale()
-        t = ts.now()
-
-        #This loads the satellites in
-        #satellites_url = "https://celestrak.com/NORAD/elements/active.txt"
-        #satellites = load.tle_file(satellites_url)
-        #print(satellites)
-        #print('Loaded', len(satellites), 'satellites')
-
-        #This is an example with the ISS
-        n = 25544
-        url = 'https://celestrak.com/satcat/tle.php?CATNR={}'.format(n)
-        filename = 'tle-CATNR-{}.txt'.format(n)
-        satellites = load.tle_file(url, filename=filename)
-        print(satellites)
-
-        #set current location, calculate difference and calculate difference from topocentric (at surface)
-        current_loc = wgs84.latlon(latitude, longitude)
-        difference = satellites[0] - current_loc
-        topocentric = difference.at(t)
-
-        alt, az, distance = topocentric.altaz()
-
-        if alt.degrees > 0:
-            print('The ISS is above the horizon')
-
-        print('Altitude:', alt)
-        print('Azimuth:', az)
-        print('Distance: {:.1f} km'.format(distance.km))
-
-        #calculateposition relative to center of earth and get lat long
-        geocentric = satellites[0].at(t)
-        lat, lon = wgs84.latlon_of(geocentric)
-        print('Latitude:', lat)
-        print('Longitude:', lon)
+        #set current location
+        current_loc = wgs84.latlon(latitude, longitude, elevation)
 
         latlng = [latitude, longitude]
 
         map = generate_map(latlng)
 
-        obs = make_observer(latitude, longitude, elevation)
-
-        #TLE CALCULATION HERE
-        calculate_visible(obs, map)
+        #TLE claculation
+        calculate_visible(current_loc, map)
 
 
         return map._repr_html_()
