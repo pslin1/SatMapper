@@ -18,4 +18,4 @@ pip install -r requirements.txt
 python3 main.py
 ```
 
-active.txt is an example of TLE information about currently active satellites. This document was downloaded from <a href=https://www.celestrak.com/NORAD/elements/> Celestrak </a> on May 16, 2021
+active.txt is an example of TLE information about currently active satellites. This document was downloaded from <a href=https://www.celestrak.com/NORAD/elements/> Celestrak </a> on Jan 10, 2022
